@@ -88,7 +88,7 @@ const Profile = () => {
       <Card className="shadow-lg overflow-visible p-6">
         <div className="flex items-center mb-6">
           <div className="w-20 h-20 bg-gray-300 rounded-full flex items-center justify-center text-3xl font-bold text-gray-600 mr-4">
-            {user.name.charAt(0).toUpperCase()}
+            {user?.name ? user.name.charAt(0).toUpperCase() : "?"}
           </div>
           <div>
             <Typography variant="h5" className="font-bold">

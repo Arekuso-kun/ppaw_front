@@ -12,7 +12,6 @@ const Navbar: React.FC = () => {
     navigate("/login");
   };
 
-  // Get actual name from localStorage
   const userString = localStorage.getItem("user");
   const user = userString ? JSON.parse(userString) : null;
   const avatarLetter = user?.name ? user.name.charAt(0).toUpperCase() : "?";

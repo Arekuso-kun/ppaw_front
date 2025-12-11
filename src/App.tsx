@@ -4,6 +4,7 @@ import Layout from "./components/Layout";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 import Login from "./pages/Login";
+import Register from "./pages/Register";
 import Home from "./pages/Home";
 import Plans from "./pages/Plans";
 import Convert from "./pages/Convert";
@@ -13,8 +14,9 @@ function App() {
   return (
     <Router>
       <Routes>
-        {/* Ruta Publică */}
+        {/* public */}
         <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
         <Route
           path="/"
           element={
@@ -24,7 +26,7 @@ function App() {
           }
         />
 
-        {/* Rute Protejate */}
+        {/* protected */}
         <Route
           path="/plans"
           element={
@@ -58,7 +60,7 @@ function App() {
           }
         />
 
-        {/* Redirect-uri */}
+        {/* redirect */}
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </Router>
