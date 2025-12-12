@@ -116,7 +116,7 @@ const Profile: React.FC = () => {
               <p className="font-medium">{convInfo.dailyUsage}</p>
             </div>
             <div>
-              <p className="text-gray-400">Mărime maximă imagine</p>
+              <p className="text-gray-400">Dimensiune maximă imagine</p>
               <p className="font-medium">{convInfo.maxFileSize} MB</p>
             </div>
             <div>

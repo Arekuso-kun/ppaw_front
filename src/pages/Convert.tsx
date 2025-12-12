@@ -126,7 +126,7 @@ const Convert: React.FC = () => {
             )}
 
             {!selectedFile && (
-              <Button variant="contained" className="bg-indigo-600 text-transform-none mt-4">
+              <Button variant="contained" color="primary" className="mt-4">
                 Alege Imagine
               </Button>
             )}
@@ -180,7 +180,8 @@ const Convert: React.FC = () => {
                   }}
                   variant="outlined"
                   size="small"
-                  className="mt-2"
+                  color="primary"
+                  className="mt-6"
                 >
                   Convertește altă imagine
                 </Button>
