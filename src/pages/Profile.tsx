@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
-import { Card, Typography, Chip, CircularProgress } from "@mui/material";
+import React, { useEffect, useState } from "react";
+import { Card, Typography, Chip, CircularProgress, Alert } from "@mui/material";
+import { apiRequest } from "../utils/api";
 
 interface Plan {
   planid: number;
@@ -18,19 +19,17 @@ interface User {
 }
 
 interface ConversionInfo {
-  canConvert: boolean;
   remainingConversions: number;
   dailyUsage: number;
   maxConversions: number;
   maxFileSize: number;
 }
 
-const API_BASE_URL = import.meta.env.API_URL || "http://localhost:3000/api/v1";
-
-const Profile = () => {
+const Profile: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [convInfo, setConvInfo] = useState<ConversionInfo | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const getPlanColors = (name: string) => {
     switch (name.toLowerCase()) {
@@ -45,30 +44,24 @@ const Profile = () => {
 
   useEffect(() => {
     const userString = localStorage.getItem("user");
-
     if (!userString) {
-      Promise.resolve().then(() => setLoading(false));
+      setLoading(false);
       return;
     }
-
     const userObj = JSON.parse(userString);
 
     const fetchData = async () => {
       try {
-        const userRes = await fetch(`${API_BASE_URL}/users/${userObj.userid}`);
-        const userData = await userRes.json();
+        const userData = await apiRequest<User>(`/users/${userObj.userid}`);
         setUser(userData);
-
-        const convRes = await fetch(`${API_BASE_URL}/users/${userObj.userid}/conversions`);
-        const convData = await convRes.json();
+        const convData = await apiRequest<ConversionInfo>(`/users/${userObj.userid}/conversions`);
         setConvInfo(convData);
-      } catch (err) {
-        console.error(err);
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : "A apărut o eroare neașteptată.");
       } finally {
         setLoading(false);
       }
     };
-
     fetchData();
   }, []);
 
@@ -79,7 +72,15 @@ const Profile = () => {
       </div>
     );
 
-  if (!user || !convInfo) return <div className="text-center mt-10">Nu s-a găsit utilizatorul.</div>;
+  if (error)
+    return (
+      <div className="container mx-auto px-4 py-10">
+        <Alert severity="error">Eroare: {error}</Alert>
+      </div>
+    );
+
+  if (!user || !convInfo)
+    return <div className="text-center mt-10">Nu s-a găsit utilizatorul sau datele de conversie.</div>;
 
   const planColors = getPlanColors(user.plans.planname);
 

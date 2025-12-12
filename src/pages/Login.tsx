@@ -13,6 +13,14 @@ import {
   CircularProgress,
   Link,
 } from "@mui/material";
+import { apiRequest } from "../utils/api";
+
+type UserData = {
+  userid: number;
+  planid: number;
+  name: string;
+  email: string;
+};
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
@@ -22,8 +30,6 @@ const Login: React.FC = () => {
   });
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
-
-  const API_BASE_URL = import.meta.env.API_URL || "http://localhost:3000/api/v1";
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -37,24 +43,15 @@ const Login: React.FC = () => {
     setError(null);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/users/login`, {
+      const data = await apiRequest<UserData>("/users/login", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        data: formData,
       });
-
-      const data = await response.json();
-
-      if (!response.ok) throw new Error(data.error || "Autentificare eșuată");
 
       localStorage.setItem("user", JSON.stringify(data));
       navigate("/convert");
     } catch (err: unknown) {
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError("A apărut o eroare de conexiune.");
-      }
+      setError(err instanceof Error ? err.message : "A apărut o eroare neașteptată.");
     } finally {
       setLoading(false);
     }

@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Card, Typography, Button, CircularProgress, Alert, Chip } from "@mui/material";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import { apiRequest } from "../utils/api";
 
 interface Plan {
   planid: number;
@@ -17,45 +18,32 @@ interface User {
   email: string;
 }
 
-const API_BASE_URL = import.meta.env.API_URL || "http://localhost:3000/api/v1";
-
-const Plans = () => {
+const Plans: React.FC = () => {
   const [plans, setPlans] = useState<Plan[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [userPlanId, setUserPlanId] = useState<number | null>(null);
   const [updatingPlanId, setUpdatingPlanId] = useState<number | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchPlans = async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/plans`);
-        if (!response.ok) {
-          throw new Error("Nu s-au putut încărca planurile.");
-        }
-        const data = await response.json();
+        const data = await apiRequest<Plan[]>("/plans");
         setPlans(data);
 
         const userString = localStorage.getItem("user");
         if (userString) {
-          const user = JSON.parse(userString);
-          if (user && user.planid) {
-            setUserPlanId(user.planid);
-          }
+          const user: User = JSON.parse(userString);
+          setUserPlanId(user.planid);
         }
       } catch (err: unknown) {
-        if (err instanceof Error) {
-          setError(err.message);
-        } else {
-          setError("A connection error occurred.");
-        }
+        setError(err instanceof Error ? err.message : "A apărut o eroare neașteptată.");
       } finally {
         setLoading(false);
       }
     };
-
-    fetchData();
+    fetchPlans();
   }, []);
 
   const handleSelectPlan = async (planid: number) => {
@@ -66,42 +54,17 @@ const Plans = () => {
 
     try {
       const userString = localStorage.getItem("user");
-      let userObj: User | null = null;
-      if (userString) {
-        userObj = JSON.parse(userString);
-      }
+      if (!userString) throw new Error("Utilizatorul nu este autentificat.");
+      const user: User = JSON.parse(userString);
 
-      if (!userObj || typeof userObj.userid !== "number") {
-        throw new Error("Utilizatorul nu este autentificat.");
-      }
-
-      const response = await fetch(`${API_BASE_URL}/users/${userObj.userid}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ planid }),
-      });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || "Eroare la actualizarea planului.");
-      }
-
-      // Update localStorage user object if present
-      if (userObj) {
-        userObj.planid = planid;
-        localStorage.setItem("user", JSON.stringify(userObj));
-      }
+      await apiRequest<User>(`/users/${user.userid}`, { method: "PUT", data: { planid } });
+      user.planid = planid;
+      localStorage.setItem("user", JSON.stringify(user));
 
       setUserPlanId(planid);
       setSuccessMessage("Planul a fost actualizat cu succes.");
     } catch (err: unknown) {
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError("A connection error occurred.");
-      }
+      setError(err instanceof Error ? err.message : "A apărut o eroare neașteptată.");
     } finally {
       setUpdatingPlanId(null);
     }
@@ -109,32 +72,17 @@ const Plans = () => {
 
   const getPlanStyles = (name: string) => {
     const lowerName = name.toLowerCase();
-    if (lowerName === "standard") {
-      return {
-        borderColor: "border-indigo-600",
-        textColor: "text-indigo-700",
-      };
-    } else if (lowerName === "premium") {
-      return {
-        borderColor: "border-purple-500",
-        textColor: "text-purple-700",
-        buttonColor: "secondary" as const,
-      };
-    } else {
-      return {
-        borderColor: "border-gray-400",
-        textColor: "text-gray-700",
-      };
-    }
+    if (lowerName === "standard") return { textColor: "text-indigo-700" };
+    if (lowerName === "premium") return { textColor: "text-purple-700" };
+    return { textColor: "text-gray-700" };
   };
 
-  if (loading) {
+  if (loading)
     return (
       <div className="flex justify-center items-center min-h-[60vh]">
         <CircularProgress />
       </div>
     );
-  }
 
   if (error) {
     return (

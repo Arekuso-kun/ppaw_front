@@ -13,8 +13,16 @@ import {
 } from "@mui/material";
 import type { SelectChangeEvent } from "@mui/material";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
+import { apiRequest } from "../utils/api";
 
-const Convert = () => {
+interface UsageLog {
+  userid: number;
+  conversiontype: string;
+  status: "success" | "pending" | "failed" | "error";
+  filesize: number;
+}
+
+const Convert: React.FC = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [targetFormat, setTargetFormat] = useState<string>("");
   const [isConverting, setIsConverting] = useState(false);
@@ -22,19 +30,15 @@ const Convert = () => {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const API_BASE_URL = import.meta.env.API_URL || "http://localhost:3000/api/v1";
-
   const handleUploadClick = () => {
     fileInputRef.current?.click();
   };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      setSelectedFile(file);
-      setTargetFormat("");
-      setStatusMessage(null);
-    }
+    const file = event.target.files?.[0] || null;
+    setSelectedFile(file);
+    setTargetFormat("");
+    setStatusMessage(null);
   };
 
   const handleFormatChange = (event: SelectChangeEvent) => {
@@ -45,52 +49,38 @@ const Convert = () => {
     try {
       const userString = localStorage.getItem("user");
       if (!userString) throw new Error("Utilizatorul nu este autentificat.");
-
       const user = JSON.parse(userString);
-
-      const userId = user.id || user.userid || 1;
+      const userId = user.userid;
 
       const sourceExtension = file.name.split(".").pop()?.toUpperCase() || "FILE";
       const conversionType = `${sourceExtension}_TO_${targetFormat}`;
 
-      const payload = {
+      const payload: UsageLog = {
         userid: userId,
         conversiontype: conversionType,
         status: "success",
         filesize: file.size,
       };
 
-      const response = await fetch(`${API_BASE_URL}/usage`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
+      await apiRequest("/usage", { method: "POST", data: payload });
 
-      if (!response.ok) {
-        throw new Error("Eroare la salvarea log-ului în baza de date.");
-      }
-
-      setStatusMessage({ type: "success", text: `Conversie finalizată cu succes!` });
+      setStatusMessage({ type: "success", text: "Conversie finalizată cu succes!" });
     } catch (err: unknown) {
       setStatusMessage({
         type: "error",
-        text: err instanceof Error ? err.message : "A apărut o eroare de conexiune.",
+        text: err instanceof Error ? err.message : "A apărut o eroare neașteptată.",
       });
+    } finally {
+      setIsConverting(false);
     }
-    setIsConverting(false);
   };
 
   const startConversion = () => {
     if (!selectedFile || !targetFormat) return;
-
     setIsConverting(true);
     setStatusMessage(null);
 
-    setTimeout(() => {
-      saveUsageLog(selectedFile);
-    }, 3000);
+    setTimeout(() => saveUsageLog(selectedFile), 2000);
   };
 
   return (
