@@ -10,10 +10,15 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from "@mui/material";
 import type { SelectChangeEvent } from "@mui/material";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import { apiRequest } from "../utils/api";
+import { useNavigate } from "react-router-dom";
 
 interface UsageLog {
   userid: number;
@@ -22,13 +27,21 @@ interface UsageLog {
   filesize: number;
 }
 
+interface ApiErrorResponse {
+  error: string;
+  errorCode?: string;
+}
+
 const Convert: React.FC = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [targetFormat, setTargetFormat] = useState<string>("");
   const [isConverting, setIsConverting] = useState(false);
   const [statusMessage, setStatusMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [openLimitDialog, setOpenLimitDialog] = useState(false);
+  const [limitErrorMessage, setLimitErrorMessage] = useState("");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const navigate = useNavigate();
 
   const handleUploadClick = () => {
     fileInputRef.current?.click();
@@ -66,10 +79,21 @@ const Convert: React.FC = () => {
 
       setStatusMessage({ type: "success", text: "Conversie finalizată cu succes!" });
     } catch (err: unknown) {
-      setStatusMessage({
-        type: "error",
-        text: err instanceof Error ? err.message : "A apărut o eroare neașteptată.",
-      });
+      const apiError = err as ApiErrorResponse;
+      const errorMessage = apiError?.error || "A apărut o eroare neașteptată.";
+      const errorCode = apiError?.errorCode;
+
+      const isLimitError = errorCode === "DAILY_LIMIT_EXCEEDED" || errorCode === "FILE_SIZE_EXCEEDED";
+
+      if (isLimitError) {
+        setLimitErrorMessage(errorMessage);
+        setOpenLimitDialog(true);
+      } else {
+        setStatusMessage({
+          type: "error",
+          text: errorMessage,
+        });
+      }
     } finally {
       setIsConverting(false);
     }
@@ -190,6 +214,33 @@ const Convert: React.FC = () => {
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={openLimitDialog} onClose={() => setOpenLimitDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle className="text-center font-bold">Limită Depășită</DialogTitle>
+        <DialogContent>
+          <Typography variant="body1" className="text-center mb-4">
+            {limitErrorMessage}
+          </Typography>
+          <Typography variant="body2" className="text-center text-gray-600">
+            Îmbunătățește-ți planul pentru a beneficia de limite mai mari.
+          </Typography>
+        </DialogContent>
+        <DialogActions className="flex justify-center gap-2 pb-4">
+          <Button onClick={() => setOpenLimitDialog(false)} variant="outlined" color="inherit">
+            Închide
+          </Button>
+          <Button
+            onClick={() => {
+              setOpenLimitDialog(false);
+              navigate("/plans");
+            }}
+            variant="contained"
+            color="primary"
+          >
+            Vezi Planurile
+          </Button>
+        </DialogActions>
+      </Dialog>
     </div>
   );
 };

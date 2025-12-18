@@ -16,13 +16,13 @@ api.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
     if (error.response?.data && typeof error.response.data === "object") {
-      const data = error.response.data as { error?: string };
+      const data = error.response.data as { error?: string; errorCode?: string };
       if (data.error) {
-        return Promise.reject(new Error(data.error));
+        return Promise.reject(data);
       }
     }
 
-    return Promise.reject(new Error(error.message || "A apărut o eroare neașteptată."));
+    return Promise.reject({ error: error.message || "A apărut o eroare neașteptată." });
   }
 );
 
