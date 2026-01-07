@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -17,15 +17,7 @@ import {
 } from "@mui/material";
 import type { SelectChangeEvent } from "@mui/material";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
-import { apiRequest } from "../utils/api";
 import { useNavigate } from "react-router-dom";
-
-interface UsageLog {
-  userid: number;
-  conversiontype: string;
-  status: "success" | "pending" | "failed" | "error";
-  filesize: number;
-}
 
 interface ApiErrorResponse {
   error: string;
@@ -39,9 +31,27 @@ const Convert: React.FC = () => {
   const [statusMessage, setStatusMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [openLimitDialog, setOpenLimitDialog] = useState(false);
   const [limitErrorMessage, setLimitErrorMessage] = useState("");
+  const [availableFormats, setAvailableFormats] = useState<string[]>([]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchFormats = async () => {
+      try {
+        const response = await fetch(
+          `${import.meta.env.VITE_API_URL || "http://localhost:3000/api/v1"}/images/formats`
+        );
+        const data = await response.json();
+        if (data.success && data.formats) {
+          setAvailableFormats(data.formats.map((f: string) => f.toUpperCase()));
+        }
+      } catch (error) {
+        console.error("Eroare la încărcarea formatelor:", error);
+      }
+    };
+    fetchFormats();
+  }, []);
 
   const handleUploadClick = () => {
     fileInputRef.current?.click();
@@ -65,19 +75,32 @@ const Convert: React.FC = () => {
       const user = JSON.parse(userString);
       const userId = user.userid;
 
-      const sourceExtension = file.name.split(".").pop()?.toUpperCase() || "FILE";
-      const conversionType = `${sourceExtension}_TO_${targetFormat}`;
+      const formData = new FormData();
+      formData.append("image", file);
+      formData.append("userId", userId.toString());
+      formData.append("targetFormat", targetFormat.toLowerCase());
 
-      const payload: UsageLog = {
-        userid: userId,
-        conversiontype: conversionType,
-        status: "success",
-        filesize: file.size,
-      };
+      const response = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:3000/api/v1"}/images/convert`, {
+        method: "POST",
+        body: formData,
+      });
 
-      await apiRequest("/usage", { method: "POST", data: payload });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw errorData;
+      }
 
-      setStatusMessage({ type: "success", text: "Conversie finalizată cu succes!" });
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `converted_${Date.now()}.${targetFormat.toLowerCase()}`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      setStatusMessage({ type: "success", text: "Conversie finalizată cu succes! Fișierul a fost descărcat." });
     } catch (err: unknown) {
       const apiError = err as ApiErrorResponse;
       const errorMessage = apiError?.error || "A apărut o eroare neașteptată.";
@@ -104,7 +127,7 @@ const Convert: React.FC = () => {
     setIsConverting(true);
     setStatusMessage(null);
 
-    setTimeout(() => saveUsageLog(selectedFile), 2000);
+    saveUsageLog(selectedFile);
   };
 
   return (
@@ -167,7 +190,7 @@ const Convert: React.FC = () => {
                   label="Alege formatul de conversie"
                   onChange={handleFormatChange}
                 >
-                  {["JPG", "PNG", "GIF", "WEBP", "BMP", "TIFF"]
+                  {availableFormats
                     .filter((format) => format !== selectedFile?.name.split(".").pop()?.toUpperCase())
                     .map((format) => (
                       <MenuItem key={format} value={format}>

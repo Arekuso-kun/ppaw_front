@@ -39,7 +39,7 @@ const Navbar: React.FC = () => {
             Planuri
           </NavLink>
           <NavLink to="/convert" className={getLinkClass}>
-            Convert
+            Convertește
           </NavLink>
         </div>
 
