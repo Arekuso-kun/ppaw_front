@@ -62,6 +62,10 @@ const Convert: React.FC = () => {
     setSelectedFile(file);
     setTargetFormat("");
     setStatusMessage(null);
+
+    if (event.target) {
+      event.target.value = "";
+    }
   };
 
   const handleFormatChange = (event: SelectChangeEvent) => {
